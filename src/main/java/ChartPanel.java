@@ -46,6 +46,7 @@ public class ChartPanel extends JPanel {
 
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         this.add(controlsPanel);
-        this.add(new CandlestickChart(generateCandlestickData()));
+        this.setOpaque(true);
+        this.add(new JScrollPane(new CandlestickChart(generateCandlestickData())));
     }
 }
