@@ -2,19 +2,44 @@ import models.OHLCV;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.util.List;
 
-class CandlestickChart extends JPanel {
+class CandlestickChart extends JPanel implements MouseListener, MouseMotionListener {
     List<OHLCV> candleSticks;
+    double zoom = 1;
+    double candlestickWidth;
+    double firstClickX;
+    double dragX;
 
     public CandlestickChart(List<OHLCV> candleSticks) {
         super();
         this.candleSticks = candleSticks;
+        this.addMouseListener(this);
+        this.addMouseMotionListener(this);
     }
 
-    public CandlestickChart() {
-        super();
-        this.candleSticks = candleSticks;
+    private double getChartWidth() {
+        Dimension size = this.getSize();
+        Insets insets = this.getInsets();
+
+        return size.width * zoom - insets.left - insets.right;
+    }
+
+    private double getChartHeight() {
+        Dimension size = this.getSize();
+        Insets insets = this.getInsets();
+
+        return size.height - insets.top - insets.bottom;
+    }
+
+    public void zoomTo(double fromX , double toX) {
+        zoom = this.getChartWidth() / Math.abs(fromX - toX);
+        firstClickX = 0;
+        dragX = 0;
+        this.repaint();
     }
 
     @Override
@@ -22,12 +47,10 @@ class CandlestickChart extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        Dimension size = getSize();
-        Insets insets = getInsets();
+        double width = this.getChartWidth();
+        double height = this.getChartHeight();
 
-        double width = size.width - insets.left - insets.right;
-        double height = size.height - insets.top - insets.bottom;
-        double candlestickWidth = width / candleSticks.size();
+        this.candlestickWidth = width / candleSticks.size();
         double max = Double.MIN_VALUE;
         double min = Double.MAX_VALUE;
         for (OHLCV candle : candleSticks) {
@@ -71,10 +94,65 @@ class CandlestickChart extends JPanel {
                     (int) candleHeight
             );
         }
+
+        g2d.setColor(new Color(15, 15, 15, 100));
+        g2d.fillRect(
+                (int) Math.min(this.firstClickX, this.dragX),
+                0,
+                (int) Math.abs(this.firstClickX - this.dragX),
+                (int) this.getChartHeight()
+        );
+    }
+
+    public void zoomIn() {
+        zoom += 0.5;
+        this.repaint();
+    }
+
+    public void zoomOut() {
+        zoom -= 0.5;
+        this.repaint();
+    }
+
+    public void zoomReset() {
+        zoom = 1;
+        this.repaint();
     }
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(500, 300);
+        return new Dimension(500, 100);
+    }
+
+    @Override
+    public void mousePressed(MouseEvent ev) {
+        firstClickX = ev.getX();
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent ev) {
+        this.zoomTo(firstClickX, ev.getX());
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+    }
+
+    @Override
+    public void mouseDragged(MouseEvent e) {
+        dragX = e.getX();
+        this.repaint();
+    }
+
+    @Override
+    public void mouseMoved(MouseEvent e) {
     }
 }

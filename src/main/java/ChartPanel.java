@@ -2,6 +2,8 @@ import models.OHLCV;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +17,9 @@ public class ChartPanel extends JPanel {
     JTextField fromInput;
     JTextField toInput;
     JComboBox aggSelect = new JComboBox(aggLevels);
+    JButton zoomIn = new JButton("+");
+    JButton zoomOut = new JButton("-");
+    CandlestickChart chart;
 
     List<OHLCV> generateCandlestickData() {
         List<OHLCV> res = new ArrayList<>();
@@ -42,11 +47,48 @@ public class ChartPanel extends JPanel {
         controlsPanel.add(toInput = new JTextField(to.toString()));
         aggSelect.setSelectedItem(aggLevel);
         controlsPanel.add(aggSelect);
+        zoomIn.setPreferredSize(new Dimension(20, zoomIn.getPreferredSize().height));
+        zoomOut.setPreferredSize(new Dimension(20, zoomOut.getPreferredSize().height));
+        controlsPanel.add(zoomIn);
+        controlsPanel.add(zoomOut);
         controlsPanel.setMaximumSize(new Dimension(10000, 50));
+        chart = new CandlestickChart(generateCandlestickData());
+        zoomOut.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    chart.zoomReset();
+                } else {
+                    chart.zoomOut();
+                }
+            }
+        });
+        zoomIn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    chart.zoomReset();
+                } else {
+                    chart.zoomIn();
+                }
+            }
+        });
 
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         this.add(controlsPanel);
         this.setOpaque(true);
-        this.add(new JScrollPane(new CandlestickChart(generateCandlestickData())));
+        this.add(new JScrollPane(chart));
+    }
+
+    public void zoomChartIn() {
+        chart.zoomIn();
+    }
+
+    public void zoomChartOut() {
+        chart.zoomOut();
+    }
+
+    public void zoomChartReset() {
+        chart.zoomReset();
     }
 }
