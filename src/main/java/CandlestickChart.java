@@ -2,6 +2,7 @@ import models.OHLCV;
 import models.Range;
 
 import java.awt.*;
+import java.time.Instant;
 import java.util.List;
 
 class CandlestickChart extends Chart {
@@ -31,10 +32,10 @@ class CandlestickChart extends Chart {
         double candlestickHeight = getChartHeight() / viewRange.getRange();
 
         for (OHLCV candlestick : candleSticks) {
+            if (candlestick.timeMicros < viewDomain.min - 60000 || candlestick.timeMicros > viewDomain.max + 60000) {
+                continue;
+            }
             double x = (candlestick.timeMicros - viewDomain.min) / 60000F;
-//            if (x < fromX - candlestickWidth || x > toX + candlestickWidth) {
-//                continue;
-//            }
             double yStart, candleHeight;
             if (candlestick.close > candlestick.open) {
                 g2d.setColor(new Color(24, 140, 32));
@@ -49,7 +50,7 @@ class CandlestickChart extends Chart {
             else {
                 g2d.setColor(Color.black);
                 yStart = candlestick.open;
-                candleHeight = 2;
+                candleHeight = 0.25;
             }
             final double lineX = x * candlestickWidth + candlestickWidth / 2;
             g2d.drawLine(
@@ -67,6 +68,30 @@ class CandlestickChart extends Chart {
         }
     }
 
+    private void paintHover(Graphics2D g2d) {
+        g2d.setColor(Color.WHITE);
+        g2d.fillRect(0, 0, getChartWidth(), 14);
+        for (OHLCV candlestick : candleSticks) {
+            if (candlestick.timeMicros > getMouseDomain() - 60000 && candlestick.timeMicros < getMouseDomain()) {
+                g2d.setColor(Color.BLACK);
+                g2d.drawString(
+                        String.format(
+                                "%s | O:% 4.2f | H:% 4.2f | L:% 4.2f | C:% 4.2f | V:% 7d",
+                                formatter.format(Instant.ofEpochMilli(candlestick.timeMicros)),
+                                candlestick.open,
+                                candlestick.high,
+                                candlestick.low,
+                                candlestick.close,
+                                candlestick.volume
+                        ),
+                        0,
+                        12
+                );
+                break;
+            }
+        }
+    }
+
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -76,6 +101,7 @@ class CandlestickChart extends Chart {
         paintXLegend(g2d);
         paintYLegend(g2d);
         paintOverlay(g2d);
+        paintHover(g2d);
         paintDebug(g2d);
     }
 }

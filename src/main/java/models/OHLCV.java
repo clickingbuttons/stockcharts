@@ -17,7 +17,7 @@ public class OHLCV implements Comparable<OHLCV> {
     public String toString() {
         return String.format("%d (%s) o: %4.3f h: %4.3f l: %4.3f c: %4.3f v: %d",
                 timeMicros,
-                Instant.ofEpochMilli(timeMicros / 1000).toString(),
+                Instant.ofEpochMilli(timeMicros).toString(),
                 open,
                 high,
                 low,

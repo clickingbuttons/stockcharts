@@ -13,7 +13,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
     protected Range<Long> viewDomainPanStart;
     protected Range<Long> viewDomain;
     protected Range<Double> viewRange;
-    private Point mouse = new Point(0, 0);
+    protected Point mouse = new Point(0, 0);
     private Point click;
     private Point2D.Double viewClick;
     private Point drag;
@@ -21,7 +21,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
 
     protected Range<Long> domain;
     protected Range<Double> range = new Range<>(Double.MAX_VALUE, Double.MIN_VALUE);
-    static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.of("UTC"));
+    protected static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.of("UTC"));
     static final DateTimeFormatter debugFormatter = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.of("UTC"));
 
     public Chart() {
@@ -62,7 +62,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
     }
 
     public void zoomOut() {
-        long offset = viewDomain.max - viewDomain.min;
+        long offset = (viewDomain.max - viewDomain.min) / 4;
         viewDomain.setMin(viewDomain.min - offset);
         viewDomain.setMax(viewDomain.max + offset);
         repaint();
@@ -88,24 +88,34 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
                 ChartPanel.legendHeight
         );
         g2d.setColor(Color.BLACK);
-        int maxLegendWidth = g2d.getFontMetrics().stringWidth("00:00");
+        int maxLegendWidth = g2d.getFontMetrics().stringWidth("00:00:00");
         int numTicks = getChartWidth() / maxLegendWidth / 2;
-        double tickPixelIncrement = (double) (getChartWidth()) / numTicks;
-        double tickIncrement = viewDomain.getRange() / numTicks;
-        for (int i = 0; i < numTicks + 1; i++) {
+        long tickIncrement = Math.round(Math.max(viewDomain.getRange() / numTicks, 60000) / 60000) * 60000;
+        for (long tickMicros = domain.min / 60000 * 60000; tickMicros < viewDomain.max; tickMicros += tickIncrement) {
+            if (tickMicros < viewDomain.min) {
+                continue;
+            }
+            double x =  (tickMicros - viewDomain.min) / viewDomain.getRange() * getChartWidth();
+
             g2d.drawLine(
-                    (int) (i * tickPixelIncrement),
+                    (int) (x),
                     getChartHeight(),
-                    (int) (i * tickPixelIncrement),
+                    (int) (x),
                     getChartHeight() + 4
             );
-            String legendVal = formatter.format(Instant.ofEpochMilli((long) (viewDomain.min + i * tickIncrement)));
+            String legendVal = debugFormatter.format(Instant.ofEpochMilli(tickMicros));
+            System.out.println(legendVal);
             g2d.drawString(
                     legendVal,
-                    (int) (i  * tickPixelIncrement - maxLegendWidth / 2),
+                    (int) (x - maxLegendWidth / 2),
                     getChartHeight() + getFont().getSize() + 6
             );
         }
+//        for (int i = 0; i < numTicks + 1; i++) {
+//            long roundedTimeMillis = roundedMin + i * tickIncrement;
+//            double x = (roundedTimeMillis - viewDomain.min) / viewDomain.getRange() * getChartWidth();
+
+//        }
         g2d.drawLine(
                 0,
                 getChartHeight(),
@@ -123,7 +133,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
                 getChartHeight()
         );
         g2d.setColor(Color.BLACK);
-        int numTicks = (int) (getChartHeight() / getFont().getSize() / 1.5);
+        int numTicks = getChartHeight() / getFont().getSize() / 3;
         double tickPixelIncrement = (double) (getChartHeight()) / numTicks;
         double tickIncrement = (range.max - range.min) / numTicks;
         for (int i = 0; i < numTicks + 1; i++) {
@@ -161,7 +171,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
         }
     }
 
-    private long getMouseDomain() {
+    protected long getMouseDomain() {
         return (long) (viewDomain.min + (mouse.getX() / getChartWidth()) * viewDomain.getRange());
     }
 
@@ -171,7 +181,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
 
     protected void paintDebug(Graphics2D g2d) {
         g2d.setColor(Color.WHITE);
-        g2d.fillRect(0, 0, getChartWidth(), 14);
+        g2d.fillRect(0, 14, getChartWidth(), 14 * 2);
         g2d.setColor(Color.BLACK);
         g2d.drawString(
                 String.format(
@@ -181,7 +191,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
                         debugFormatter.format(Instant.ofEpochMilli(viewDomain.min)), debugFormatter.format(Instant.ofEpochMilli(viewDomain.max)),
                         viewRange.min, viewRange.max),
                 0,
-                12
+                28
         );
     }
 
