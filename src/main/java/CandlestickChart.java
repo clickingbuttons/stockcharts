@@ -1,158 +1,81 @@
 import models.OHLCV;
+import models.Range;
 
-import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.util.List;
 
-class CandlestickChart extends JPanel implements MouseListener, MouseMotionListener {
-    List<OHLCV> candleSticks;
-    double zoom = 1;
-    double candlestickWidth;
-    double firstClickX;
-    double dragX;
+class CandlestickChart extends Chart {
+    private List<OHLCV> candleSticks;
+    private double numCandles;
 
     public CandlestickChart(List<OHLCV> candleSticks) {
         super();
         this.candleSticks = candleSticks;
-        this.addMouseListener(this);
-        this.addMouseMotionListener(this);
-    }
-
-    private double getChartWidth() {
-        Dimension size = this.getSize();
-        Insets insets = this.getInsets();
-
-        return size.width * zoom - insets.left - insets.right;
-    }
-
-    private double getChartHeight() {
-        Dimension size = this.getSize();
-        Insets insets = this.getInsets();
-
-        return size.height - insets.top - insets.bottom;
-    }
-
-    public void zoomTo(double fromX , double toX) {
-        zoom = this.getChartWidth() / Math.abs(fromX - toX);
-        firstClickX = 0;
-        dragX = 0;
-        this.repaint();
-    }
-
-    @Override
-    public void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        Graphics2D g2d = (Graphics2D) g;
-
-        double width = this.getChartWidth();
-        double height = this.getChartHeight();
-
-        this.candlestickWidth = width / candleSticks.size();
-        double max = Double.MIN_VALUE;
-        double min = Double.MAX_VALUE;
+        range = new Range<>(Double.MAX_VALUE, Double.MIN_VALUE);
         for (OHLCV candle : candleSticks) {
-            if (candle.high > max) {
-                max = candle.high;
+            if (candle.high > range.max) {
+                range.setMax(candle.high);
             }
-            if (candle.low < min) {
-                min = candle.low;
+            if (candle.low < range.min) {
+                range.setMin(candle.low);
             }
         }
-        double heightScale = height / (max - min);
+        domain = new Range<>(candleSticks.get(0).timeMicros, candleSticks.get(candleSticks.size() - 1).timeMicros + 60000);
+        viewDomain = new Range<>(domain.min, domain.max);
+        viewRange = new Range<>(range.min, range.max);
+        numCandles = domain.getRange() / 60000;
+    }
 
-        for (int i = 0; i < candleSticks.size(); i++) {
-            OHLCV candlestick = candleSticks.get(i);
+    private void paintCandles(Graphics2D g2d) {
+        double candlestickWidth = (double) getChartWidth() / numCandles * (domain.getRange() / viewDomain.getRange());
+        double candlestickHeight = getChartHeight() / viewRange.getRange();
+
+        for (OHLCV candlestick : candleSticks) {
+            double x = (candlestick.timeMicros - viewDomain.min) / 60000F;
+//            if (x < fromX - candlestickWidth || x > toX + candlestickWidth) {
+//                continue;
+//            }
             double yStart, candleHeight;
             if (candlestick.close > candlestick.open) {
-                g2d.setColor(Color.green);
+                g2d.setColor(new Color(24, 140, 32));
                 yStart = candlestick.close;
-                candleHeight = (candlestick.close - candlestick.open) * heightScale;
+                candleHeight = (candlestick.close - candlestick.open);
             }
             else if (candlestick.close < candlestick.open) {
                 g2d.setColor(Color.red);
                 yStart = candlestick.open;
-                candleHeight = (candlestick.open - candlestick.close) * heightScale;
+                candleHeight = (candlestick.open - candlestick.close) ;
             }
             else {
                 g2d.setColor(Color.black);
                 yStart = candlestick.open;
                 candleHeight = 2;
             }
+            final double lineX = x * candlestickWidth + candlestickWidth / 2;
             g2d.drawLine(
-                    (int) (i * candlestickWidth + candlestickWidth / 2 - 1),
-                    (int) ((max - candlestick.low)  * heightScale),
-                    (int) (i * candlestickWidth + candlestickWidth / 2 - 1),
-                    (int) ((max - candlestick.high) * heightScale)
+                    (int) lineX - 1,
+                    (int) ((range.max - candlestick.low)  * candlestickHeight),
+                    (int) lineX - 1,
+                    (int) ((range.max - candlestick.high) * candlestickHeight)
             );
             g2d.fillRect(
-                    (int) (i * candlestickWidth),
-                    (int) ((max - yStart) * heightScale),
+                    (int) (x * candlestickWidth),
+                    (int) ((range.max - yStart) * candlestickHeight),
                     (int) candlestickWidth - 1,
-                    (int) candleHeight
+                    (int) (candleHeight * candlestickHeight)
             );
         }
-
-        g2d.setColor(new Color(15, 15, 15, 100));
-        g2d.fillRect(
-                (int) Math.min(this.firstClickX, this.dragX),
-                0,
-                (int) Math.abs(this.firstClickX - this.dragX),
-                (int) this.getChartHeight()
-        );
-    }
-
-    public void zoomIn() {
-        zoom += 0.5;
-        this.repaint();
-    }
-
-    public void zoomOut() {
-        zoom -= 0.5;
-        this.repaint();
-    }
-
-    public void zoomReset() {
-        zoom = 1;
-        this.repaint();
     }
 
     @Override
-    public Dimension getPreferredSize() {
-        return new Dimension(500, 100);
-    }
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
 
-    @Override
-    public void mousePressed(MouseEvent ev) {
-        firstClickX = ev.getX();
-    }
-
-    @Override
-    public void mouseReleased(MouseEvent ev) {
-        this.zoomTo(firstClickX, ev.getX());
-    }
-
-    @Override
-    public void mouseClicked(MouseEvent e) {
-    }
-
-    @Override
-    public void mouseEntered(MouseEvent e) {
-    }
-
-    @Override
-    public void mouseExited(MouseEvent e) {
-    }
-
-    @Override
-    public void mouseDragged(MouseEvent e) {
-        dragX = e.getX();
-        this.repaint();
-    }
-
-    @Override
-    public void mouseMoved(MouseEvent e) {
+        Graphics2D g2d = (Graphics2D) g;
+        paintCandles(g2d);
+        paintXLegend(g2d);
+        paintYLegend(g2d);
+        paintOverlay(g2d);
+        paintDebug(g2d);
     }
 }

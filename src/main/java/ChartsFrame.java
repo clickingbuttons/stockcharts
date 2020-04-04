@@ -11,14 +11,14 @@ public class ChartsFrame extends JFrame  {
     Instant to = Instant.parse("2015-01-01T10:30:00Z");
     JButton zoomIn = new JButton("+");
     JButton zoomOut = new JButton("-");
-    String[] symbols = {"AAPL", "AMZN", "MSFT", "TSLA", "SPY", "GDR", "GE"};
+//    String[] symbols = {"AAPL", "AMZN", "MSFT", "TSLA", "SPY", "GDR", "GE", "ABC", "AB", "A", "AA", "AAA", "B", "BB", "BBC", "BBB", "BA"};
+    String[] symbols = {"AAPL"};
 
     public ChartsFrame(String name) {
         super(name);
+        toolbar.setLayout(new BoxLayout(toolbar, BoxLayout.Y_AXIS));
         toolbar.add(zoomOut);
         toolbar.add(zoomIn);
-        zoomOut.setPreferredSize(new Dimension(24, zoomOut.getPreferredSize().height));
-        zoomIn.setPreferredSize(new Dimension(24, zoomIn.getPreferredSize().height));
         zoomIn.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -50,11 +50,10 @@ public class ChartsFrame extends JFrame  {
         }
         charts.setLayout(new GridLayout(0,1));
         JPanel mainPane = new JPanel();
-        mainPane.setLayout(new BoxLayout(mainPane, BoxLayout.PAGE_AXIS));
+        mainPane.setLayout(new BoxLayout(mainPane, BoxLayout.X_AXIS));
         mainPane.add(toolbar);
         JScrollPane pane = new JScrollPane(charts, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        // Scrollbar padding = 12
-        pane.setPreferredSize(new Dimension(pane.getPreferredSize().width + 12, pane.getPreferredSize().height));
+        pane.setPreferredSize(new Dimension(pane.getPreferredSize().width, pane.getPreferredSize().height));
         mainPane.add(pane);
         this.add(mainPane);
     }

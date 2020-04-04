@@ -1,6 +1,7 @@
 import models.OHLCV;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -10,7 +11,9 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class ChartPanel extends JPanel {
-    static final String aggLevels[] = {"Minute", "Day"};
+    static final int legendHeight = 20;
+    static final int legendWidth = 50;
+    static final String aggLevels[] = {"1m", "1d"};
 
     JPanel controlsPanel = new JPanel();
     JTextField symbolInput;
@@ -43,12 +46,12 @@ public class ChartPanel extends JPanel {
         super();
         controlsPanel.setLayout(new BoxLayout(controlsPanel, BoxLayout.X_AXIS));
         controlsPanel.add(symbolInput = new JTextField(symbol));
+        symbolInput.setColumns(5);
+        symbolInput.setMaximumSize(new Dimension(symbolInput.getPreferredSize().width, symbolInput.getMaximumSize().height));
         controlsPanel.add(fromInput = new JTextField(from.toString()));
         controlsPanel.add(toInput = new JTextField(to.toString()));
         aggSelect.setSelectedItem(aggLevel);
         controlsPanel.add(aggSelect);
-        zoomIn.setPreferredSize(new Dimension(20, zoomIn.getPreferredSize().height));
-        zoomOut.setPreferredSize(new Dimension(20, zoomOut.getPreferredSize().height));
         controlsPanel.add(zoomIn);
         controlsPanel.add(zoomOut);
         controlsPanel.setMaximumSize(new Dimension(10000, 50));
@@ -75,9 +78,10 @@ public class ChartPanel extends JPanel {
         });
 
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        this.add(controlsPanel);
         this.setOpaque(true);
-        this.add(new JScrollPane(chart));
+        this.setDoubleBuffered(true);
+        this.add(controlsPanel);
+        this.add(chart);
     }
 
     public void zoomChartIn() {
