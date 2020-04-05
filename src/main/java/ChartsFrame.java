@@ -11,8 +11,7 @@ public class ChartsFrame extends JFrame  {
     Instant to = Instant.parse("2015-01-01T10:30:00Z");
     JButton zoomIn = new JButton("+");
     JButton zoomOut = new JButton("-");
-//    String[] symbols = {"AAPL", "AMZN", "MSFT", "TSLA", "SPY", "GDR", "GE", "ABC", "AB", "A", "AA", "AAA", "B", "BB", "BBC", "BBB", "BA"};
-    String[] symbols = {"AAPL"};
+    String[] symbols = {"AAPL", "AMZN", "MSFT", "TSLA", "SPY", "GDR", "GE", "ABC", "AB", "A", "AA", "AAA", "B", "BB", "BBC", "BBB", "BA"};
 
     public ChartsFrame(String name) {
         super(name);

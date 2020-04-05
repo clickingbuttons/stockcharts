@@ -79,6 +79,28 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
         repaint();
     }
 
+    private void paintXLegendTick(Graphics2D g2d, long tickMicros, DateTimeFormatter formatter, boolean invert) {
+        int maxLegendWidth = g2d.getFontMetrics().stringWidth(formatter.format(Instant.ofEpochMilli(domain.min)));
+        int x = (int) ((tickMicros - viewDomain.min) / viewDomain.getRange() * getChartWidth());
+
+        if (invert) {
+            g2d.setColor(Color.BLACK);
+            g2d.fillRect(x - maxLegendWidth / 2, getChartHeight(), maxLegendWidth,  ChartPanel.legendHeight);
+        }
+        g2d.setColor(invert ? Color.WHITE : Color.BLACK);
+        g2d.drawLine(
+                x,
+                getChartHeight(),
+                x,
+                getChartHeight() + 4
+        );
+        g2d.drawString(
+                formatter.format(Instant.ofEpochMilli(tickMicros)),
+                x - maxLegendWidth / 2,
+                getChartHeight() + getFont().getSize() + 6
+        );
+    }
+
     protected void paintXLegend(Graphics2D g2d) {
         g2d.setColor(getBackground());
         g2d.fillRect(
@@ -88,39 +110,43 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
                 ChartPanel.legendHeight
         );
         g2d.setColor(Color.BLACK);
-        int maxLegendWidth = g2d.getFontMetrics().stringWidth("00:00:00");
+        int maxLegendWidth = g2d.getFontMetrics().stringWidth(formatter.format(Instant.ofEpochMilli(domain.min)));
         int numTicks = getChartWidth() / maxLegendWidth / 2;
         long tickIncrement = Math.round(Math.max(viewDomain.getRange() / numTicks, 60000) / 60000) * 60000;
         for (long tickMicros = domain.min / 60000 * 60000; tickMicros < viewDomain.max; tickMicros += tickIncrement) {
             if (tickMicros < viewDomain.min) {
                 continue;
             }
-            double x =  (tickMicros - viewDomain.min) / viewDomain.getRange() * getChartWidth();
 
-            g2d.drawLine(
-                    (int) (x),
-                    getChartHeight(),
-                    (int) (x),
-                    getChartHeight() + 4
-            );
-            String legendVal = debugFormatter.format(Instant.ofEpochMilli(tickMicros));
-            System.out.println(legendVal);
-            g2d.drawString(
-                    legendVal,
-                    (int) (x - maxLegendWidth / 2),
-                    getChartHeight() + getFont().getSize() + 6
-            );
+            paintXLegendTick(g2d, tickMicros, formatter, false);
         }
-//        for (int i = 0; i < numTicks + 1; i++) {
-//            long roundedTimeMillis = roundedMin + i * tickIncrement;
-//            double x = (roundedTimeMillis - viewDomain.min) / viewDomain.getRange() * getChartWidth();
-
-//        }
         g2d.drawLine(
                 0,
                 getChartHeight(),
                 getChartWidth(),
                 getChartHeight()
+        );
+    }
+
+    private void paintYLegendTick(Graphics2D g2d, double price, boolean invert) {
+        int y = (int) (getChartHeight() - (price - viewRange.min) / viewRange.getRange() * getChartHeight());
+
+        if (invert) {
+            g2d.setColor(Color.BLACK);
+            g2d.fillRect(getChartWidth(), y - getFont().getSize() / 2 + 1, ChartPanel.legendWidth,  getFont().getSize());
+        }
+        g2d.setColor(invert ? Color.WHITE : Color.BLACK);
+        g2d.drawLine(
+                getChartWidth(),
+                y,
+                getChartWidth() + 4,
+                y
+        );
+        String legendVal = String.format("%.2f", price);
+        g2d.drawString(
+                legendVal,
+                getChartWidth() + 6,
+                y + getFont().getSize() / 2 - 1
         );
     }
 
@@ -134,21 +160,9 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
         );
         g2d.setColor(Color.BLACK);
         int numTicks = getChartHeight() / getFont().getSize() / 3;
-        double tickPixelIncrement = (double) (getChartHeight()) / numTicks;
         double tickIncrement = (range.max - range.min) / numTicks;
         for (int i = 0; i < numTicks + 1; i++) {
-            g2d.drawLine(
-                    getChartWidth(),
-                    (int) (i * tickPixelIncrement),
-                    getChartWidth() + 4,
-                    (int) (i * tickPixelIncrement)
-            );
-            String legendVal = String.format("%.2f", range.max - i * tickIncrement);
-            g2d.drawString(
-                    legendVal,
-                    getChartWidth() + 6,
-                    (int) (i  * tickPixelIncrement + getFont().getSize() / 2 - 1)
-            );
+            paintYLegendTick(g2d, range.min + i * tickIncrement, false);
         }
         g2d.drawLine(
                 getChartWidth(),
@@ -168,6 +182,17 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
                     (int) Math.abs(click.getX() - Math.min(drag.getX(), getChartWidth())),
                     getChartHeight()
             );
+        }
+        // Crosshair
+        if (mouse.x < getChartWidth()) {
+            g2d.setColor(Color.BLACK);
+            g2d.drawLine(mouse.x - 1, 0, mouse.x - 1, getChartHeight());
+            paintXLegendTick(g2d, getMouseDomain(), debugFormatter, true);
+        }
+        if (mouse.y < getChartHeight()) {
+            g2d.setColor(Color.BLACK);
+            g2d.drawLine(0, mouse.y, getChartWidth(), mouse.y);
+            paintYLegendTick(g2d, getMouseRange(), true);
         }
     }
 
@@ -206,9 +231,6 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
             viewRange.setMin(range.min);
             viewRange.setMax(range.max);
             repaint();
-        }
-        if (hasResized) {
-//            view.width *= dimension.width / view.width;
         }
     }
 
@@ -274,8 +296,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
     }
 
     @Override
-    public void mouseEntered(MouseEvent ev) {
-    }
+    public void mouseEntered(MouseEvent ev) {}
 
     @Override
     public void mouseExited(MouseEvent ev) {
