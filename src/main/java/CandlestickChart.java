@@ -68,25 +68,28 @@ class CandlestickChart extends Chart {
         }
     }
 
-    private void paintHover(Graphics2D g2d) {
-        g2d.setColor(Color.WHITE);
-        g2d.fillRect(0, 0, getChartWidth(), 14);
+    private void paintOHLCV(Graphics2D g2d) {
+        if (!showCrosshair) {
+            return;
+        }
         for (OHLCV candlestick : candleSticks) {
             if (candlestick.timeMicros > getMouseDomain() - 60000 && candlestick.timeMicros < getMouseDomain()) {
-                g2d.setColor(Color.BLACK);
-                g2d.drawString(
-                        String.format(
-                                "%s | O:% 4.2f | H:% 4.2f | L:% 4.2f | C:% 4.2f | V:% 7d",
-                                formatter.format(Instant.ofEpochMilli(candlestick.timeMicros)),
-                                candlestick.open,
-                                candlestick.high,
-                                candlestick.low,
-                                candlestick.close,
-                                candlestick.volume
-                        ),
-                        0,
-                        12
+                String displayString = String.format(
+                        "%s | O:% 4.2f | H:% 4.2f | L:% 4.2f | C:% 4.2f | V:% 7d",
+                        formatter.format(Instant.ofEpochMilli(candlestick.timeMicros)),
+                        candlestick.open,
+                        candlestick.high,
+                        candlestick.low,
+                        candlestick.close,
+                        candlestick.volume
                 );
+                int width = g2d.getFontMetrics().stringWidth(displayString);
+                int x = mouse.x > width ? 0 : getChartWidth() - width;
+                int y = mouse.y > 14 ? 0 : getChartHeight() - 12;
+                g2d.setColor(Color.BLACK);
+                g2d.fillRect(x, y, width, 14);
+                g2d.setColor(Color.WHITE);
+                g2d.drawString(displayString, x, y + 12);
                 break;
             }
         }
@@ -100,8 +103,8 @@ class CandlestickChart extends Chart {
         paintCandles(g2d);
         paintXLegend(g2d);
         paintYLegend(g2d);
+        paintOHLCV(g2d);
         paintOverlay(g2d);
-        paintHover(g2d);
-        paintDebug(g2d);
+//        paintDebug(g2d);
     }
 }

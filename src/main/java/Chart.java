@@ -9,6 +9,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 public class Chart extends JPanel implements ComponentListener, MouseListener, MouseMotionListener {
+    protected static final int legendHeight = 20;
+    protected static final int legendWidth = 50;
     private Dimension dimension;
     protected Range<Long> viewDomainPanStart;
     protected Range<Long> viewDomain;
@@ -18,6 +20,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
     private Point2D.Double viewClick;
     private Point drag;
     private boolean isZooming = false;
+    protected boolean showCrosshair = false;
 
     protected Range<Long> domain;
     protected Range<Double> range = new Range<>(Double.MAX_VALUE, Double.MIN_VALUE);
@@ -35,14 +38,14 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
         Dimension size = getSize();
         Insets insets = getInsets();
 
-        return size.width - insets.left - insets.right - ChartPanel.legendWidth;
+        return size.width - insets.left - insets.right - legendWidth;
     }
 
     protected int getChartHeight() {
         Dimension size = getSize();
         Insets insets = getInsets();
 
-        return size.height - insets.top - insets.bottom - ChartPanel.legendHeight;
+        return size.height - insets.top - insets.bottom - legendHeight;
     }
 
     public void zoomTo(long from, long to) {
@@ -85,7 +88,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
 
         if (invert) {
             g2d.setColor(Color.BLACK);
-            g2d.fillRect(x - maxLegendWidth / 2, getChartHeight(), maxLegendWidth,  ChartPanel.legendHeight);
+            g2d.fillRect(x - maxLegendWidth / 2, getChartHeight(), maxLegendWidth,  legendHeight);
         }
         g2d.setColor(invert ? Color.WHITE : Color.BLACK);
         g2d.drawLine(
@@ -107,7 +110,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
                 0,
                 getChartHeight(),
                 getChartWidth(),
-                ChartPanel.legendHeight
+                legendHeight
         );
         g2d.setColor(Color.BLACK);
         int maxLegendWidth = g2d.getFontMetrics().stringWidth(formatter.format(Instant.ofEpochMilli(domain.min)));
@@ -133,7 +136,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
 
         if (invert) {
             g2d.setColor(Color.BLACK);
-            g2d.fillRect(getChartWidth(), y - getFont().getSize() / 2 + 1, ChartPanel.legendWidth,  getFont().getSize());
+            g2d.fillRect(getChartWidth(), y - getFont().getSize() / 2 + 1, legendWidth,  getFont().getSize());
         }
         g2d.setColor(invert ? Color.WHITE : Color.BLACK);
         g2d.drawLine(
@@ -155,7 +158,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
         g2d.fillRect(
                 getChartWidth(),
                 0,
-                ChartPanel.legendWidth,
+                legendWidth,
                 getChartHeight()
         );
         g2d.setColor(Color.BLACK);
@@ -184,15 +187,17 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
             );
         }
         // Crosshair
-        if (mouse.x < getChartWidth()) {
-            g2d.setColor(Color.BLACK);
-            g2d.drawLine(mouse.x - 1, 0, mouse.x - 1, getChartHeight());
-            paintXLegendTick(g2d, getMouseDomain(), debugFormatter, true);
-        }
-        if (mouse.y < getChartHeight()) {
-            g2d.setColor(Color.BLACK);
-            g2d.drawLine(0, mouse.y, getChartWidth(), mouse.y);
-            paintYLegendTick(g2d, getMouseRange(), true);
+        if (showCrosshair) {
+            if (mouse.x < getChartWidth()) {
+                g2d.setColor(Color.BLACK);
+                g2d.drawLine(mouse.x - 1, 0, mouse.x - 1, getChartHeight());
+                paintXLegendTick(g2d, getMouseDomain(), debugFormatter, true);
+            }
+            if (mouse.y < getChartHeight()) {
+                g2d.setColor(Color.BLACK);
+                g2d.drawLine(0, mouse.y, getChartWidth(), mouse.y);
+                paintYLegendTick(g2d, getMouseRange(), true);
+            }
         }
     }
 
@@ -296,10 +301,15 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
     }
 
     @Override
-    public void mouseEntered(MouseEvent ev) {}
+    public void mouseEntered(MouseEvent ev) {
+        showCrosshair = true;
+        repaint();
+    }
 
     @Override
     public void mouseExited(MouseEvent ev) {
+        showCrosshair = false;
+        repaint();
     }
 
     @Override

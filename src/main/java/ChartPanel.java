@@ -11,8 +11,6 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class ChartPanel extends JPanel {
-    static final int legendHeight = 20;
-    static final int legendWidth = 50;
     static final String aggLevels[] = {"1m", "1d"};
 
     JPanel controlsPanel = new JPanel();
