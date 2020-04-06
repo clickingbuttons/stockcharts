@@ -1,4 +1,5 @@
 import models.Range;
+import models.Trace;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,6 +21,8 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
     private Point2D.Double viewClick;
     private Point drag;
     private boolean isZooming = false;
+    private boolean isTracing = false;
+    private Trace trace;
     protected boolean showCrosshair = false;
 
     protected Range<Long> domain;
@@ -54,7 +57,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
 
         viewDomain.setMin(left);
         viewDomain.setMax(right);
-        resetChartZoom();
+        resetChart();
     }
 
     public void zoomIn() {
@@ -77,8 +80,10 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
         repaint();
     }
 
-    public void resetChartZoom() {
+    public void resetChart() {
         isZooming = false;
+        isTracing = false;
+        trace = null;
         repaint();
     }
 
@@ -175,6 +180,12 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
         );
     }
 
+    private void paintTraceLabel(Graphics2D g2d, String label, Point point, boolean isOffset) {
+        int labelWidth = g2d.getFontMetrics().stringWidth(label);
+        int xOffset = isOffset ? -labelWidth - 12 : 12;
+        g2d.drawString(label, point.x + xOffset, Math.max(point.y, g2d.getFont().getSize()));
+    }
+
     protected void paintOverlay(Graphics2D g2d) {
         // Zoom drag
         if (isZooming) {
@@ -199,6 +210,20 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
                 paintYLegendTick(g2d, getMouseRange(), true);
             }
         }
+        // Trace
+        if (trace != null) {
+            Graphics2D trace2d = (Graphics2D) g2d.create();
+            trace2d.setFont(new Font("default", Font.BOLD, 16));
+            trace2d.setStroke(new BasicStroke(4));
+            trace2d.setColor(Color.BLACK);
+            trace2d.drawLine(trace.start.x, trace.start.y, trace.end.x, trace.end.y);
+
+            String startLabel = String.format("%3.2f", trace.startValue.y);
+            paintTraceLabel(trace2d, startLabel, trace.start, trace.endValue.x > trace.startValue.x);
+            double percentDiff =  (trace.endValue.y - trace.startValue.y) * 100.0 / trace.startValue.y;
+            String endLabel = String.format("%3.2f (%2.2f%%)", trace.endValue.y, percentDiff);
+            paintTraceLabel(trace2d, endLabel, trace.end, trace.endValue.x < trace.startValue.x);
+        }
     }
 
     protected long getMouseDomain() {
@@ -211,7 +236,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
 
     protected void paintDebug(Graphics2D g2d) {
         g2d.setColor(Color.WHITE);
-        g2d.fillRect(0, 14, getChartWidth(), 14 * 2);
+        g2d.fillRect(0, 0, getChartWidth(), 14);
         g2d.setColor(Color.BLACK);
         g2d.drawString(
                 String.format(
@@ -221,7 +246,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
                         debugFormatter.format(Instant.ofEpochMilli(viewDomain.min)), debugFormatter.format(Instant.ofEpochMilli(viewDomain.max)),
                         viewRange.min, viewRange.max),
                 0,
-                28
+                12
         );
     }
 
@@ -251,9 +276,12 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
 
     @Override
     public void mousePressed(MouseEvent ev) {
-        click = new Point(ev.getX(), ev.getY());
+        click = ev.getPoint();
         viewClick = new Point2D.Double(getMouseDomain(), getMouseRange());
         viewDomainPanStart = new Range<>(viewDomain.min, viewDomain.max);
+        if (SwingUtilities.isMiddleMouseButton(ev)) {
+            trace = new Trace(ev.getPoint(), new Point2D.Double(getMouseDomain(), getMouseRange()));
+        }
     }
 
     @Override
@@ -263,8 +291,12 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
             if (click != null && Math.abs(ev.getX() - click.getX()) > 20) {
                 zoomTo((long) viewClick.x, getMouseDomain());
             } else {
-                resetChartZoom();
+                resetChart();
             }
+        }
+        // Trace
+        if (SwingUtilities.isMiddleMouseButton(ev)) {
+            isTracing = false;
         }
     }
 
@@ -290,6 +322,13 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
         else if (SwingUtilities.isRightMouseButton(ev)) {
             drag = new Point(ev.getX(), ev.getY());
             isZooming = true;
+            repaint();
+        }
+        // Trace
+        else if (SwingUtilities.isMiddleMouseButton(ev)) {
+            isTracing = true;
+            trace.end = new Point(mouse.x, mouse.y);
+            trace.endValue = new Point2D.Double(getMouseDomain(), getMouseRange());
             repaint();
         }
     }
