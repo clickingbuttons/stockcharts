@@ -3,6 +3,8 @@ import models.OHLCV;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.Instant;
@@ -12,6 +14,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class ChartPanel extends JPanel {
     static final String aggLevels[] = {"1m", "1d"};
+    static final long day = 60000 * 60 * 24;
 
     JPanel controlsPanel = new JPanel();
     JTextField symbolInput;
@@ -22,12 +25,12 @@ public class ChartPanel extends JPanel {
     JButton zoomOut = new JButton("-");
     CandlestickChart chart;
 
-    List<OHLCV> generateCandlestickData() {
+    List<OHLCV> generateCandlestickData(long frequency) {
         List<OHLCV> res = new ArrayList<>();
 
         Instant from = Instant.parse(fromInput.getText());
         Instant to = Instant.parse(toInput.getText());
-        for (long it = from.toEpochMilli(); it < to.toEpochMilli(); it+=60000) {
+        for (long it = from.toEpochMilli(); it < to.toEpochMilli(); it += frequency) {
             OHLCV candle = new OHLCV(it);
             candle.open = ThreadLocalRandom.current().nextInt(180, 200 + 1);
             candle.close = ThreadLocalRandom.current().nextInt(180, 200 + 1);
@@ -53,7 +56,7 @@ public class ChartPanel extends JPanel {
         controlsPanel.add(zoomIn);
         controlsPanel.add(zoomOut);
         controlsPanel.setMaximumSize(new Dimension(10000, 50));
-        chart = new CandlestickChart(generateCandlestickData());
+        chart = new CandlestickChart(generateCandlestickData(60000), 60000);
         zoomOut.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -72,6 +75,23 @@ public class ChartPanel extends JPanel {
                 } else {
                     chart.zoomIn();
                 }
+            }
+        });
+        aggSelect.addItemListener(e -> {
+            if (e.getItem().toString().compareTo("1m") == 0) {
+                toInput.setText("2015-01-01T10:30:00Z");
+                this.remove(chart);
+                chart = new CandlestickChart(generateCandlestickData(60000), 60000);
+                this.add(chart);
+                this.validate();
+                this.repaint();
+            } else if (e.getItem().toString().compareTo("1d") == 0) {
+                toInput.setText("2016-01-01T10:30:00Z");
+                this.remove(chart);
+                chart = new CandlestickChart(generateCandlestickData(day), day);
+                this.add(chart);
+                this.validate();
+                this.repaint();
             }
         });
 

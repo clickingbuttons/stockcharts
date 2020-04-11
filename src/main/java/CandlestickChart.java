@@ -3,15 +3,25 @@ import models.Range;
 
 import java.awt.*;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 class CandlestickChart extends Chart {
     private List<OHLCV> candleSticks;
     private double numCandles;
 
-    public CandlestickChart(List<OHLCV> candleSticks) {
+    public CandlestickChart(List<OHLCV> candleSticks, long frequency) {
         super();
         this.candleSticks = candleSticks;
+        this.frequency = frequency;
+        if (this.frequency <= 60000) {
+            formatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.of("UTC"));
+            detailFormatter = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.of("UTC"));
+        } else {
+            formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.of("UTC"));
+            detailFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.of("UTC"));
+        }
         range = new Range<>(Double.MAX_VALUE, Double.MIN_VALUE);
         for (OHLCV candle : candleSticks) {
             if (candle.high > range.max) {
@@ -21,10 +31,10 @@ class CandlestickChart extends Chart {
                 range.setMin(candle.low);
             }
         }
-        domain = new Range<>(candleSticks.get(0).timeMicros, candleSticks.get(candleSticks.size() - 1).timeMicros + 60000);
+        domain = new Range<>(candleSticks.get(0).timeMicros, candleSticks.get(candleSticks.size() - 1).timeMicros + frequency);
         viewDomain = new Range<>(domain.min, domain.max);
         viewRange = new Range<>(range.min, range.max);
-        numCandles = domain.getRange() / 60000;
+        numCandles = domain.getRange() / frequency;
     }
 
     private void paintCandles(Graphics2D g2d) {
@@ -32,10 +42,10 @@ class CandlestickChart extends Chart {
         double candlestickHeight = getChartHeight() / viewRange.getRange();
 
         for (OHLCV candlestick : candleSticks) {
-            if (candlestick.timeMicros < viewDomain.min - 60000 || candlestick.timeMicros > viewDomain.max + 60000) {
+            if (candlestick.timeMicros < viewDomain.min - frequency || candlestick.timeMicros > viewDomain.max + frequency) {
                 continue;
             }
-            double x = (candlestick.timeMicros - viewDomain.min) / 60000F;
+            double x = (double) (candlestick.timeMicros - viewDomain.min) / frequency;
             double yStart, candleHeight;
             if (candlestick.close > candlestick.open) {
                 g2d.setColor(new Color(24, 140, 32));
@@ -73,7 +83,7 @@ class CandlestickChart extends Chart {
             return;
         }
         for (OHLCV candlestick : candleSticks) {
-            if (candlestick.timeMicros > getMouseDomain() - 60000 && candlestick.timeMicros < getMouseDomain()) {
+            if (candlestick.timeMicros > getMouseDomain() - frequency && candlestick.timeMicros < getMouseDomain()) {
                 String displayString = String.format(
                         "%s | O:% 4.2f | H:% 4.2f | L:% 4.2f | C:% 4.2f | V:% 7d",
                         formatter.format(Instant.ofEpochMilli(candlestick.timeMicros)),

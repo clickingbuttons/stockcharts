@@ -21,14 +21,14 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
     private Point2D.Double viewClick;
     private Point drag;
     private boolean isZooming = false;
-    private boolean isTracing = false;
     private Trace trace;
     protected boolean showCrosshair = false;
+    protected long frequency;
 
     protected Range<Long> domain;
     protected Range<Double> range = new Range<>(Double.MAX_VALUE, Double.MIN_VALUE);
-    protected static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.of("UTC"));
-    static final DateTimeFormatter debugFormatter = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.of("UTC"));
+    protected DateTimeFormatter formatter;
+    protected DateTimeFormatter detailFormatter;
 
     public Chart() {
         super();
@@ -82,7 +82,6 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
 
     public void resetChart() {
         isZooming = false;
-        isTracing = false;
         trace = null;
         repaint();
     }
@@ -120,8 +119,8 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
         g2d.setColor(Color.BLACK);
         int maxLegendWidth = g2d.getFontMetrics().stringWidth(formatter.format(Instant.ofEpochMilli(domain.min)));
         int numTicks = getChartWidth() / maxLegendWidth / 2;
-        long tickIncrement = Math.round(Math.max(viewDomain.getRange() / numTicks, 60000) / 60000) * 60000;
-        for (long tickMicros = domain.min / 60000 * 60000; tickMicros < viewDomain.max; tickMicros += tickIncrement) {
+        long tickIncrement = Math.round(Math.max(viewDomain.getRange() / numTicks, frequency) / frequency) * frequency;
+        for (long tickMicros = domain.min / frequency * frequency; tickMicros < viewDomain.max; tickMicros += tickIncrement) {
             if (tickMicros < viewDomain.min) {
                 continue;
             }
@@ -202,7 +201,7 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
             if (mouse.x < getChartWidth()) {
                 g2d.setColor(Color.BLACK);
                 g2d.drawLine(mouse.x - 1, 0, mouse.x - 1, getChartHeight());
-                paintXLegendTick(g2d, getMouseDomain(), debugFormatter, true);
+                paintXLegendTick(g2d, getMouseDomain(), detailFormatter, true);
             }
             if (mouse.y < getChartHeight()) {
                 g2d.setColor(Color.BLACK);
@@ -242,8 +241,8 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
                 String.format(
                         "%04d,%04d=%s,%04.2f view: %s,%s,%04.2f,%04.2f",
                         mouse.x, mouse.y,
-                        debugFormatter.format(Instant.ofEpochMilli(getMouseDomain())), getMouseRange(),
-                        debugFormatter.format(Instant.ofEpochMilli(viewDomain.min)), debugFormatter.format(Instant.ofEpochMilli(viewDomain.max)),
+                        detailFormatter.format(Instant.ofEpochMilli(getMouseDomain())), getMouseRange(),
+                        detailFormatter.format(Instant.ofEpochMilli(viewDomain.min)), detailFormatter.format(Instant.ofEpochMilli(viewDomain.max)),
                         viewRange.min, viewRange.max),
                 0,
                 12
@@ -294,10 +293,6 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
                 resetChart();
             }
         }
-        // Trace
-        if (SwingUtilities.isMiddleMouseButton(ev)) {
-            isTracing = false;
-        }
     }
 
     @Override
@@ -326,7 +321,6 @@ public class Chart extends JPanel implements ComponentListener, MouseListener, M
         }
         // Trace
         else if (SwingUtilities.isMiddleMouseButton(ev)) {
-            isTracing = true;
             trace.end = new Point(mouse.x, mouse.y);
             trace.endValue = new Point2D.Double(getMouseDomain(), getMouseRange());
             repaint();
